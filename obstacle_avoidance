@@ -1,0 +1,113 @@
+﻿#!/usr/bin/env python
+import rospy
+
+from geometry_msgs.msg import Twist
+#from sensor_msgs.msg import Range
+from auto.msg import ultrasound_msg
+from auto.msg import Decider
+import time
+
+
+rospy.init_node('obstacle_avoider')
+out=Decider()
+
+
+
+def left():  
+	out.Twist.linear.x=0
+	out.Twist.angular.z=-8
+	print("left")
+	out.status=1
+
+def right():
+	out.Twist.linear.x=0
+	out.Twist.angular.z=8
+	print("right")
+	out.status=1
+
+def forward():
+	out.Twist.linear.x=8
+	out.Twist.angular.z=0
+	print("forward")
+	out.status=0
+
+def forward_slow():
+	out.Twist.linear.x=5
+	out.Twist.angular.z=0
+	print("forward slow")
+	out.status=1
+
+def backward():
+	out.Twist.linear.x=-8
+	out.Twist.angular.z=0
+	print("backward")
+	out.status=1
+
+def stop():
+	out.Twist.linear.x=0
+	out.Twist.angular.z=0
+	print("stop")
+	out.status=0
+
+r=rospy.Rate(200)
+
+def callback(msg,pub):
+
+
+	dist1=msg.dist1
+	dist2=msg.dist2
+	dist3=msg.dist3
+
+
+
+	if(dist1<0 and dist2<0 and dist3<0):
+		forward()
+		
+
+	elif((dist1<30 and dist1>2) or ( dist3<30 and dist3>2) or (dist2<20 and dist2>2)):
+		backward()
+		
+
+
+
+	elif(dist2<40 and dist2>2):
+		if(dist1>2):
+			right()
+			
+		elif(dist3>2):
+			left()
+			
+		else:
+			left()
+			
+	elif(dist1<50 and (dist1>2 and dist1<150)):
+		if(dist1>2 and dist1<150):
+			right()
+			
+		elif(dist2<0 and dist3>0):
+			forward_slow()
+			
+		else:
+			right()
+			
+
+	elif(dist3<50 and (dist3>2 and dist3<150)):
+		if(dist1>2 and dist1<150):
+			left()
+		
+		elif(dist2<0 and dist1>0):
+			forward_slow()
+			
+		else:
+			left()
+			
+	else:
+		forward()
+	
+
+	pub.publish(out)
+
+pub=rospy.Publisher('/path_by_obstacle',Decider,queue_size=1)
+sub=rospy.Subscriber('ultrasound_data',ultrasound_msg,callback,pub)
+
+rospy.spin()
